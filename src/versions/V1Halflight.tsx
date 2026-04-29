@@ -11,7 +11,7 @@ import {
 } from '@phosphor-icons/react'
 import { HeroVideo } from '../HeroVideo'
 import { useAudio } from '../audio'
-import { coverArt } from '../coverArt'
+import { photo } from '../coverArt'
 import { previewTracks } from '../data'
 import './V1Halflight.css'
 
@@ -104,7 +104,7 @@ function FeaturedArt() {
       transition={{ duration: 1.0, ease: [0.16, 1, 0.3, 1] }}
     >
       <motion.img
-        src={coverArt('Halflight', { hue: 18, glyph: 'vinyl', w: 1280, h: 1280, subtitle: 'Mini-Album · MMXXVI' })}
+        src={photo.micBw(1280, 1280)}
         alt="Halflight album art"
         loading="lazy"
         decoding="async"
@@ -130,25 +130,25 @@ type Product = { title: string; tag: string; price: string; src: string }
 type VideoCard = { title: string; meta: string; src: string }
 
 const eras: Era[] = [
-  { title: 'Halflight',         year: '2026', cat: 'LP · IRIS VEIL',  src: coverArt("Halflight", { hue: 18, glyph: "vinyl" }) },
-  { title: 'Soft Architecture', year: '2023', cat: 'LP · IRIS VEIL',  src: coverArt("Soft Architecture", { hue: 215, glyph: "wave" }) },
-  { title: 'Pale Star',         year: '2025', cat: 'EP · IRIS VEIL',  src: coverArt("Pale Star", { hue: 280, glyph: "aperture" }) },
-  { title: 'Telegraph Hour',    year: '2022', cat: 'EP · IRIS VEIL',  src: coverArt("Telegraph Hour", { hue: 340, glyph: "mic" }) },
+  { title: 'Halflight',         year: '2026', cat: 'LP · IRIS VEIL',  src: photo.micBw(720, 720, true) },
+  { title: 'Soft Architecture', year: '2023', cat: 'LP · IRIS VEIL',  src: photo.stage(720, 720, true) },
+  { title: 'Pale Star',         year: '2025', cat: 'EP · IRIS VEIL',  src: photo.dj(720, 720, true) },
+  { title: 'Telegraph Hour',    year: '2022', cat: 'EP · IRIS VEIL',  src: photo.micCloseup(720, 720, true) },
 ]
 
 const products: Product[] = [
-  { title: 'Halflight · Limited Translucent Vinyl',     tag: 'LP', price: '€34',  src: coverArt("Translucent Vinyl", { hue: 18, glyph: "vinyl" }) },
-  { title: 'Halflight · Cassette',                       tag: 'CS', price: '€16',  src: coverArt("Cassette", { hue: 32, glyph: "tape" }) },
-  { title: 'Tower Sessions · Tee, Bone Cotton',          tag: 'APP', price: '€48', src: coverArt("Tower Sessions", { hue: 200, glyph: "shirt" }) },
-  { title: 'Halflight · Hardcover Songbook',             tag: 'PR', price: '€28',  src: coverArt("Songbook", { hue: 240, glyph: "page" }) },
-  { title: 'Telegraph Hour · 7” Reissue',           tag: '7"', price: '€18',  src: coverArt("Telegraph 7\"", { hue: 340, glyph: "vinyl" }) },
-  { title: 'Iris Veil · Tour Crewneck',                  tag: 'APP', price: '€68', src: coverArt("Tour 2026", { hue: 285, glyph: "shirt" }) },
+  { title: 'Halflight · Limited Translucent Vinyl',     tag: 'LP', price: '€34',  src: photo.dj(720, 720, true) },
+  { title: 'Halflight · Cassette',                       tag: 'CS', price: '€16',  src: photo.boombox(720, 720, true) },
+  { title: 'Tower Sessions · Tee, Bone Cotton',          tag: 'APP', price: '€48', src: photo.band(720, 720, true) },
+  { title: 'Halflight · Hardcover Songbook',             tag: 'PR', price: '€28',  src: photo.micPurple(720, 720, true) },
+  { title: 'Telegraph Hour · 7” Reissue',           tag: '7"', price: '€18',  src: photo.guitarBlack(720, 720, true) },
+  { title: 'Iris Veil · Tour Crewneck',                  tag: 'APP', price: '€68', src: photo.festival(720, 720, true) },
 ]
 
 const videos: VideoCard[] = [
-  { title: 'Cathedrals',                meta: 'Official Film · Dir. Léa Marchant · 04:32', src: coverArt("Cathedrals", { hue: 215, glyph: "film", w: 1080, h: 720, subtitle: "Dir. Léa Marchant" }) },
-  { title: 'Halflight (Tower Session)', meta: 'Live · Tegel · 03:47',                       src: coverArt("Tower Session", { hue: 18, glyph: "mic", w: 1080, h: 720, subtitle: "Live - Tegel" }) },
-  { title: 'Letter for the Burning House', meta: 'Visual · Dir. Iris Veil · 05:01',         src: coverArt("Letter for the Burning House", { hue: 12, glyph: "wave", w: 1080, h: 720, subtitle: "Visual" }) },
+  { title: 'Cathedrals',                meta: 'Official Film · Dir. Léa Marchant · 04:32', src: photo.performer(1080, 720, true) },
+  { title: 'Halflight (Tower Session)', meta: 'Live · Tegel · 03:47',                       src: photo.micWarm(1080, 720, true) },
+  { title: 'Letter for the Burning House', meta: 'Visual · Dir. Iris Veil · 05:01',         src: photo.guitarBlue(1080, 720, true) },
 ]
 
 export function V1Halflight() {

@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useEffect, useRef } from 'react'
 import { motion } from 'motion/react'
 import {
   EnvelopeSimple,
@@ -11,7 +11,7 @@ import {
 import { HeroVideo } from '../HeroVideo'
 import { previewTracks } from '../data'
 import { useAudio } from '../audio'
-import { coverArt } from '../coverArt'
+import { photo } from '../coverArt'
 import './V3Static.css'
 
 type Tile = {
@@ -29,66 +29,115 @@ const tiles: Tile[] = [
   {
     id: 't1', span: 'large', date: '23 APR 26', cat: 'Music',
     title: 'Halflight — out now',
-    src: coverArt('Halflight', { hue: 18, glyph: 'vinyl', w: 1080, h: 1080, subtitle: 'Mini-Album · Out Now' }),
+    src: photo.micBw(1080, 1080, false),
     href: '#release', kind: 'audio',
   },
   {
     id: 't2', span: 'wide', date: '21 APR 26', cat: 'Video',
     title: 'Cathedrals — official film',
-    src: coverArt('Cathedrals', { hue: 215, glyph: 'film', w: 1080, h: 720, subtitle: 'Official Film' }),
+    src: photo.performer(1080, 720, false),
     href: '#video', kind: 'video',
   },
   {
     id: 't3', span: 'tall', date: '18 APR 26', cat: 'Press',
     title: 'On the cover of Dazed',
-    src: coverArt('Dazed · May', { hue: 340, glyph: 'page', w: 720, h: 1080, subtitle: 'Cover Story' }),
+    src: photo.micPurple(720, 1080, false),
     href: '#press', kind: 'press',
   },
   {
     id: 't4', span: 'sq', date: '15 APR 26', cat: 'Photos',
     title: 'Studio Tegel · sessions',
-    src: coverArt('Tegel Studio', { hue: 200, glyph: 'mic', subtitle: 'Sessions' }),
+    src: photo.micCloseup(720, 720, false),
     href: '#photos', kind: 'photo',
   },
   {
     id: 't5', span: 'wide', date: '12 APR 26', cat: 'Live',
     title: 'Spring tour 2026 announced',
-    src: coverArt('Spring Tour 2026', { hue: 285, glyph: 'tour', w: 1080, h: 720, subtitle: '6 Cities · Europe' }),
+    src: photo.festival(1080, 720, false),
     href: '#shows',
   },
   {
     id: 't6', span: 'sq', date: '08 APR 26', cat: 'Photos',
     title: 'Berlin · roof shoot',
-    src: coverArt('Berlin Roof', { hue: 240, glyph: 'aperture', subtitle: 'Photo Shoot' }),
+    src: photo.band(720, 720, false),
     href: '#photos', kind: 'photo',
   },
   {
     id: 't7', span: 'tall', date: '03 APR 26', cat: 'Music',
     title: 'Pale Star · single',
-    src: coverArt('Pale Star', { hue: 280, glyph: 'note', w: 720, h: 1080, subtitle: 'Single' }),
+    src: photo.dj(720, 1080, false),
     href: '#release', kind: 'audio',
   },
   {
     id: 't8', span: 'sq', date: '01 APR 26', cat: 'Merch',
     title: 'Limited vinyl pressing',
-    src: coverArt('Limited Vinyl', { hue: 32, glyph: 'vinyl', subtitle: 'Pressing of 500' }),
+    src: photo.guitarBlack(720, 720, false),
     href: '#shop',
   },
   {
     id: 't9', span: 'wide', date: '24 MAR 26', cat: 'Interview',
     title: 'In conversation · The FADER',
-    src: coverArt('The FADER', { hue: 12, glyph: 'mic', w: 1080, h: 720, subtitle: 'In Conversation' }),
+    src: photo.stage(1080, 720, false),
     href: '#press', kind: 'press',
   },
   {
     id: 't10', span: 'sq', date: '15 MAR 26', cat: 'Behind',
     title: 'Tower sessions · day 12',
-    src: coverArt('Day 12', { hue: 165, glyph: 'wave', subtitle: 'Tower Sessions' }),
+    src: photo.crowd(720, 720, false),
     href: '#photos', kind: 'photo',
   },
 ]
 
 const filters = ['ALL', 'NOW', 'MUSIC', 'VIDEOS', 'PHOTOS', 'PRESS', 'LIVE'] as const
+
+function V3Hero() {
+  const ref = useRef<HTMLElement>(null)
+
+  useEffect(() => {
+    const el = ref.current
+    if (!el) return
+    let frame = 0
+    const onMove = (e: MouseEvent) => {
+      cancelAnimationFrame(frame)
+      frame = requestAnimationFrame(() => {
+        const r = el.getBoundingClientRect()
+        el.style.setProperty('--mx', `${e.clientX - r.left}px`)
+        el.style.setProperty('--my', `${e.clientY - r.top}px`)
+      })
+    }
+    const onLeave = () => {
+      el.style.setProperty('--mx', '-9999px')
+      el.style.setProperty('--my', '-9999px')
+    }
+    el.addEventListener('mousemove', onMove)
+    el.addEventListener('mouseleave', onLeave)
+    return () => {
+      cancelAnimationFrame(frame)
+      el.removeEventListener('mousemove', onMove)
+      el.removeEventListener('mouseleave', onLeave)
+    }
+  }, [])
+
+  return (
+    <section ref={ref} className="v3-hero" id="top">
+      <div className="v3-hero-video" aria-hidden="true">
+        <HeroVideo className="v3-hv-frame" rate={0.5} showVeil={false} />
+      </div>
+      <div className="v3-hero-bw" aria-hidden="true" />
+      <div className="v3-hero-overlay">
+        <div className="v3-hero-stamp">CH 04 · 04:11</div>
+        <h1 className="v3-hero-title">
+          <span>HALF</span><span>LIGHT</span>
+        </h1>
+        <div className="v3-hero-meta">
+          <span>NEW MINI-ALBUM</span>
+          <span>23.04.2026</span>
+          <span>GLASSROOM RECORDS</span>
+        </div>
+      </div>
+    </section>
+  )
+}
 
 function V3Preview() {
   const { current, playing, play } = useAudio()
@@ -154,22 +203,7 @@ export function V3Static() {
         </div>
       </section>
 
-      <section className="v3-hero" id="top">
-        <div className="v3-hero-video" aria-hidden="true">
-          <HeroVideo className="v3-hv-frame" rate={0.5} showVeil={false} />
-        </div>
-        <div className="v3-hero-overlay">
-          <div className="v3-hero-stamp">CH 04 · 04:11</div>
-          <h1 className="v3-hero-title">
-            <span>HALF</span><span>LIGHT</span>
-          </h1>
-          <div className="v3-hero-meta">
-            <span>NEW MINI-ALBUM</span>
-            <span>23.04.2026</span>
-            <span>GLASSROOM RECORDS</span>
-          </div>
-        </div>
-      </section>
+      <V3Hero />
 
       <section className="v3-grid" id="now">
         {tiles.map((t, i) => (
