@@ -11,6 +11,7 @@ import {
 import { HeroVideo } from '../HeroVideo'
 import { previewTracks } from '../data'
 import { useAudio } from '../audio'
+import { coverArt } from '../coverArt'
 import './V3Static.css'
 
 type Tile = {
@@ -28,61 +29,61 @@ const tiles: Tile[] = [
   {
     id: 't1', span: 'large', date: '23 APR 26', cat: 'Music',
     title: 'Halflight — out now',
-    src: 'https://picsum.photos/id/1043/1080/1080',
+    src: coverArt('Halflight', { hue: 18, glyph: 'vinyl', w: 1080, h: 1080, subtitle: 'Mini-Album · Out Now' }),
     href: '#release', kind: 'audio',
   },
   {
     id: 't2', span: 'wide', date: '21 APR 26', cat: 'Video',
     title: 'Cathedrals — official film',
-    src: 'https://picsum.photos/id/1062/1080/720',
+    src: coverArt('Cathedrals', { hue: 215, glyph: 'film', w: 1080, h: 720, subtitle: 'Official Film' }),
     href: '#video', kind: 'video',
   },
   {
     id: 't3', span: 'tall', date: '18 APR 26', cat: 'Press',
     title: 'On the cover of Dazed',
-    src: 'https://picsum.photos/id/1015/720/1080',
+    src: coverArt('Dazed · May', { hue: 340, glyph: 'page', w: 720, h: 1080, subtitle: 'Cover Story' }),
     href: '#press', kind: 'press',
   },
   {
     id: 't4', span: 'sq', date: '15 APR 26', cat: 'Photos',
     title: 'Studio Tegel · sessions',
-    src: 'https://picsum.photos/id/119/720/720',
+    src: coverArt('Tegel Studio', { hue: 200, glyph: 'mic', subtitle: 'Sessions' }),
     href: '#photos', kind: 'photo',
   },
   {
     id: 't5', span: 'wide', date: '12 APR 26', cat: 'Live',
     title: 'Spring tour 2026 announced',
-    src: 'https://picsum.photos/id/1029/1080/720',
+    src: coverArt('Spring Tour 2026', { hue: 285, glyph: 'tour', w: 1080, h: 720, subtitle: '6 Cities · Europe' }),
     href: '#shows',
   },
   {
     id: 't6', span: 'sq', date: '08 APR 26', cat: 'Photos',
     title: 'Berlin · roof shoot',
-    src: 'https://picsum.photos/id/1066/720/720',
+    src: coverArt('Berlin Roof', { hue: 240, glyph: 'aperture', subtitle: 'Photo Shoot' }),
     href: '#photos', kind: 'photo',
   },
   {
     id: 't7', span: 'tall', date: '03 APR 26', cat: 'Music',
     title: 'Pale Star · single',
-    src: 'https://picsum.photos/id/1050/720/1080',
+    src: coverArt('Pale Star', { hue: 280, glyph: 'note', w: 720, h: 1080, subtitle: 'Single' }),
     href: '#release', kind: 'audio',
   },
   {
     id: 't8', span: 'sq', date: '01 APR 26', cat: 'Merch',
     title: 'Limited vinyl pressing',
-    src: 'https://picsum.photos/id/177/720/720',
+    src: coverArt('Limited Vinyl', { hue: 32, glyph: 'vinyl', subtitle: 'Pressing of 500' }),
     href: '#shop',
   },
   {
     id: 't9', span: 'wide', date: '24 MAR 26', cat: 'Interview',
     title: 'In conversation · The FADER',
-    src: 'https://picsum.photos/id/433/1080/720',
+    src: coverArt('The FADER', { hue: 12, glyph: 'mic', w: 1080, h: 720, subtitle: 'In Conversation' }),
     href: '#press', kind: 'press',
   },
   {
     id: 't10', span: 'sq', date: '15 MAR 26', cat: 'Behind',
     title: 'Tower sessions · day 12',
-    src: 'https://picsum.photos/id/477/720/720',
+    src: coverArt('Day 12', { hue: 165, glyph: 'wave', subtitle: 'Tower Sessions' }),
     href: '#photos', kind: 'photo',
   },
 ]
