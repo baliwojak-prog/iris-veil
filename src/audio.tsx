@@ -37,6 +37,10 @@ export function AudioProvider({ children }: { children: ReactNode }) {
   const [currentTime, setCurrentTime] = useState(0)
   const [duration, setDuration] = useState(0)
 
+  // ref mirrors `current` so the `ended` handler can auto-advance without re-binding
+  const currentRef = useRef<PreviewTrack | null>(null)
+  useEffect(() => { currentRef.current = current }, [current])
+
   // attach event listeners to the singleton audio element
   useEffect(() => {
     const el = elRef.current
@@ -46,14 +50,14 @@ export function AudioProvider({ children }: { children: ReactNode }) {
     const onPlay = () => setPlaying(true)
     const onPause = () => setPlaying(false)
     const onEnded = () => {
-      setPlaying(false)
-      // auto-advance
-      setCurrent((c) => {
-        if (!c) return c
-        const idx = previewTracks.findIndex((t) => t.id === c.id)
-        const nextTrack = previewTracks[(idx + 1) % previewTracks.length]
-        return nextTrack ?? null
-      })
+      const c = currentRef.current
+      if (!c) { setPlaying(false); return }
+      const idx = previewTracks.findIndex((t) => t.id === c.id)
+      const nextTrack = previewTracks[(idx + 1) % previewTracks.length]
+      if (!nextTrack) return
+      el.src = nextTrack.src
+      el.play().catch(() => {})
+      setCurrent(nextTrack)
     }
     el.addEventListener('timeupdate', onTime)
     el.addEventListener('loadedmetadata', onMeta)
@@ -69,56 +73,54 @@ export function AudioProvider({ children }: { children: ReactNode }) {
     }
   }, [])
 
-  // load + play whenever `current` changes
-  useEffect(() => {
+  /* synchronous swap — must run inside the originating user-gesture handler
+     so the browser allows `el.play()` without throwing autoplay restrictions */
+  const swapTrack = (t: PreviewTrack) => {
     const el = elRef.current
-    if (!el || !current) return
-    if (el.src !== window.location.origin + current.src) {
-      el.src = current.src
-    }
-    el.play().catch(() => {/* user-gesture required, ignore */})
-  }, [current])
+    if (!el) return
+    if (!el.src.endsWith(t.src)) el.src = t.src
+    el.play().catch(() => {})
+    setCurrent(t)
+  }
 
   const play = useCallback((id: string) => {
     const t = previewTracks.find((x) => x.id === id) ?? null
-    setCurrent((prev) => {
-      if (prev?.id === id) {
-        // same track — toggle play/pause
-        const el = elRef.current
-        if (el) {
-          if (el.paused) el.play().catch(() => {})
-          else el.pause()
-        }
-        return prev
-      }
-      return t
-    })
-  }, [])
+    if (!t) return
+    const el = elRef.current
+    if (!el) return
+    if (current?.id === id) {
+      if (el.paused) el.play().catch(() => {})
+      else el.pause()
+      return
+    }
+    swapTrack(t)
+  }, [current])
 
   const toggle = useCallback(() => {
     const el = elRef.current
-    if (!el || !current) return
+    if (!el) return
+    if (!current) {
+      const first = previewTracks[0]
+      if (first) swapTrack(first)
+      return
+    }
     if (el.paused) el.play().catch(() => {})
     else el.pause()
   }, [current])
 
   const next = useCallback(() => {
-    if (!current) {
-      setCurrent(previewTracks[0] ?? null)
-      return
-    }
-    const idx = previewTracks.findIndex((t) => t.id === current.id)
-    setCurrent(previewTracks[(idx + 1) % previewTracks.length] ?? null)
+    const t = current
+      ? previewTracks[(previewTracks.findIndex((x) => x.id === current.id) + 1) % previewTracks.length]
+      : previewTracks[0]
+    if (t) swapTrack(t)
   }, [current])
 
   const prev = useCallback(() => {
-    if (!current) {
-      setCurrent(previewTracks[previewTracks.length - 1] ?? null)
-      return
-    }
-    const idx = previewTracks.findIndex((t) => t.id === current.id)
-    const prevIdx = (idx - 1 + previewTracks.length) % previewTracks.length
-    setCurrent(previewTracks[prevIdx] ?? null)
+    const idx = current
+      ? (previewTracks.findIndex((x) => x.id === current.id) - 1 + previewTracks.length) % previewTracks.length
+      : previewTracks.length - 1
+    const t = previewTracks[idx]
+    if (t) swapTrack(t)
   }, [current])
 
   const seek = useCallback((frac: number) => {
