@@ -27,11 +27,6 @@ export function useAudio() {
 
 export function AudioProvider({ children }: { children: ReactNode }) {
   const elRef = useRef<HTMLAudioElement | null>(null)
-  if (!elRef.current && typeof window !== 'undefined') {
-    elRef.current = new Audio()
-    elRef.current.preload = 'metadata'
-  }
-
   const [current, setCurrent] = useState<PreviewTrack | null>(null)
   const [playing, setPlaying] = useState(false)
   const [currentTime, setCurrentTime] = useState(0)
@@ -41,87 +36,72 @@ export function AudioProvider({ children }: { children: ReactNode }) {
   const currentRef = useRef<PreviewTrack | null>(null)
   useEffect(() => { currentRef.current = current }, [current])
 
-  // attach event listeners to the singleton audio element
-  useEffect(() => {
+  /* synchronous play — must run inside the originating user-gesture handler */
+  const startPlayback = useCallback((t: PreviewTrack) => {
     const el = elRef.current
     if (!el) return
-    const onTime = () => setCurrentTime(el.currentTime)
-    const onMeta = () => setDuration(el.duration || 0)
-    const onPlay = () => setPlaying(true)
-    const onPause = () => setPlaying(false)
-    const onEnded = () => {
-      const c = currentRef.current
-      if (!c) { setPlaying(false); return }
-      const idx = previewTracks.findIndex((t) => t.id === c.id)
-      const nextTrack = previewTracks[(idx + 1) % previewTracks.length]
-      if (!nextTrack) return
-      el.src = nextTrack.src
-      el.play().catch(() => {})
-      setCurrent(nextTrack)
+    if (!el.src.endsWith(t.src)) {
+      el.src = t.src
+      el.load()
     }
-    el.addEventListener('timeupdate', onTime)
-    el.addEventListener('loadedmetadata', onMeta)
-    el.addEventListener('play', onPlay)
-    el.addEventListener('pause', onPause)
-    el.addEventListener('ended', onEnded)
-    return () => {
-      el.removeEventListener('timeupdate', onTime)
-      el.removeEventListener('loadedmetadata', onMeta)
-      el.removeEventListener('play', onPlay)
-      el.removeEventListener('pause', onPause)
-      el.removeEventListener('ended', onEnded)
+    setCurrent(t)
+    const p = el.play()
+    if (p && typeof p.then === 'function') {
+      p.catch((err) => {
+        // Log so we can see autoplay/codec failures
+        // eslint-disable-next-line no-console
+        console.warn('[audio] play() rejected:', err?.name, err?.message, 'src:', el.currentSrc)
+      })
     }
   }, [])
 
-  /* synchronous swap — must run inside the originating user-gesture handler
-     so the browser allows `el.play()` without throwing autoplay restrictions */
-  const swapTrack = (t: PreviewTrack) => {
-    const el = elRef.current
-    if (!el) return
-    if (!el.src.endsWith(t.src)) el.src = t.src
-    el.play().catch(() => {})
-    setCurrent(t)
-  }
-
   const play = useCallback((id: string) => {
-    const t = previewTracks.find((x) => x.id === id) ?? null
+    const t = previewTracks.find((x) => x.id === id)
     if (!t) return
     const el = elRef.current
     if (!el) return
     if (current?.id === id) {
-      if (el.paused) el.play().catch(() => {})
-      else el.pause()
+      if (el.paused) {
+        const p = el.play()
+        if (p && typeof p.then === 'function') p.catch(() => {})
+      } else {
+        el.pause()
+      }
       return
     }
-    swapTrack(t)
-  }, [current])
+    startPlayback(t)
+  }, [current, startPlayback])
 
   const toggle = useCallback(() => {
     const el = elRef.current
     if (!el) return
     if (!current) {
       const first = previewTracks[0]
-      if (first) swapTrack(first)
+      if (first) startPlayback(first)
       return
     }
-    if (el.paused) el.play().catch(() => {})
-    else el.pause()
-  }, [current])
+    if (el.paused) {
+      const p = el.play()
+      if (p && typeof p.then === 'function') p.catch(() => {})
+    } else {
+      el.pause()
+    }
+  }, [current, startPlayback])
 
   const next = useCallback(() => {
     const t = current
       ? previewTracks[(previewTracks.findIndex((x) => x.id === current.id) + 1) % previewTracks.length]
       : previewTracks[0]
-    if (t) swapTrack(t)
-  }, [current])
+    if (t) startPlayback(t)
+  }, [current, startPlayback])
 
   const prev = useCallback(() => {
     const idx = current
       ? (previewTracks.findIndex((x) => x.id === current.id) - 1 + previewTracks.length) % previewTracks.length
       : previewTracks.length - 1
     const t = previewTracks[idx]
-    if (t) swapTrack(t)
-  }, [current])
+    if (t) startPlayback(t)
+  }, [current, startPlayback])
 
   const seek = useCallback((frac: number) => {
     const el = elRef.current
@@ -136,7 +116,41 @@ export function AudioProvider({ children }: { children: ReactNode }) {
     [current, playing, progress, currentTime, duration, play, toggle, next, prev, seek],
   )
 
-  return <AudioCtx.Provider value={api}>{children}</AudioCtx.Provider>
+  // shared listeners for the JSX audio element
+  const onTime = () => { const el = elRef.current; if (el) setCurrentTime(el.currentTime) }
+  const onMeta = () => { const el = elRef.current; if (el) setDuration(el.duration || 0) }
+  const onPlay = () => setPlaying(true)
+  const onPause = () => setPlaying(false)
+  const onEnded = () => {
+    const c = currentRef.current
+    const el = elRef.current
+    if (!c || !el) { setPlaying(false); return }
+    const idx = previewTracks.findIndex((t) => t.id === c.id)
+    const nextTrack = previewTracks[(idx + 1) % previewTracks.length]
+    if (!nextTrack) return
+    el.src = nextTrack.src
+    setCurrent(nextTrack)
+    const p = el.play()
+    if (p && typeof p.then === 'function') p.catch(() => {})
+  }
+
+  return (
+    <AudioCtx.Provider value={api}>
+      {children}
+      <audio
+        ref={elRef}
+        preload="metadata"
+        playsInline
+        onTimeUpdate={onTime}
+        onLoadedMetadata={onMeta}
+        onPlay={onPlay}
+        onPause={onPause}
+        onEnded={onEnded}
+        // hidden but kept in DOM
+        style={{ display: 'none' }}
+      />
+    </AudioCtx.Provider>
+  )
 }
 
 const fmt = (s: number) => {
@@ -178,7 +192,7 @@ export function MiniPlayer() {
           )}
         </button>
         <button onClick={next} aria-label="Next track" className="mp-btn">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M16 6h2v12h-2zM4.5 12l10 6V6z" transform="scale(1,1)"/><path d="M16 6h2v12h-2zM6 6l10 6L6 18z"/></svg>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M16 6h2v12h-2zM6 6l10 6L6 18z"/></svg>
         </button>
       </div>
       <div className="mp-bar-wrap" onClick={onScrub}>
