@@ -87,9 +87,10 @@
   background: var(--bg);
 }
 
-.v4-source-video {
-  position: absolute; width: 1px; height: 1px;
-  opacity: 0; pointer-events: none;
+.v4-base-video {
+  position: absolute; inset: 0;
+  width: 100%; height: 100%; object-fit: cover; object-position: 50% 50%;
+  filter: contrast(1.05) saturate(0.95) brightness(0.94);
 }
 
 /* each strip is a clipped copy of the video that translates on scroll */

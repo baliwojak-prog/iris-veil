@@ -88,6 +88,11 @@ const tiles: Tile[] = [
   },
 ]
 
+const stablePhotoCount = (id: string) => {
+  const total = Array.from(id).reduce((sum, char) => sum + char.charCodeAt(0), 0)
+  return 6 + (total % 18)
+}
+
 const filters = ['ALL', 'NOW', 'MUSIC', 'VIDEOS', 'PHOTOS', 'PRESS', 'LIVE'] as const
 
 function V3Hero() {
@@ -228,7 +233,7 @@ export function V3Static() {
             {t.kind === 'video' && <span className="v3-tile-badge">▶ VIDEO</span>}
             {t.kind === 'audio' && <span className="v3-tile-badge">♪ LISTEN</span>}
             {t.kind === 'press' && <span className="v3-tile-badge">PRESS</span>}
-            {t.kind === 'photo' && <span className="v3-tile-badge">+ {Math.floor(Math.random() * 18 + 6)}</span>}
+            {t.kind === 'photo' && <span className="v3-tile-badge">+ {stablePhotoCount(t.id)}</span>}
           </motion.a>
         ))}
       </section>

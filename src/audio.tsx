@@ -1,9 +1,12 @@
+/* eslint-disable react-refresh/only-export-components */
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { previewTracks, type PreviewTrack } from './data'
 
 type AudioState = {
   current: PreviewTrack | null
   playing: boolean
+  blocked: boolean
+  error: string | null
   progress: number       // 0..1
   currentTime: number    // seconds
   duration: number       // seconds
@@ -11,6 +14,7 @@ type AudioState = {
 
 type AudioApi = AudioState & {
   play: (id: string) => void
+  requestAutoplay: (id?: string) => () => void
   toggle: () => void
   next: () => void
   prev: () => void
@@ -27,14 +31,22 @@ export function useAudio() {
 
 export function AudioProvider({ children }: { children: ReactNode }) {
   const elRef = useRef<HTMLAudioElement | null>(null)
+  const autoplayCleanupRef = useRef<(() => void) | null>(null)
   const [current, setCurrent] = useState<PreviewTrack | null>(null)
   const [playing, setPlaying] = useState(false)
+  const [blocked, setBlocked] = useState(false)
+  const [error, setError] = useState<string | null>(null)
   const [currentTime, setCurrentTime] = useState(0)
   const [duration, setDuration] = useState(0)
 
   // ref mirrors `current` so the `ended` handler can auto-advance without re-binding
   const currentRef = useRef<PreviewTrack | null>(null)
   useEffect(() => { currentRef.current = current }, [current])
+
+  const clearAutoplayListeners = useCallback(() => {
+    autoplayCleanupRef.current?.()
+    autoplayCleanupRef.current = null
+  }, [])
 
   /* synchronous play — must run inside the originating user-gesture handler */
   const startPlayback = useCallback((t: PreviewTrack) => {
@@ -45,15 +57,21 @@ export function AudioProvider({ children }: { children: ReactNode }) {
       el.load()
     }
     setCurrent(t)
+    setError(null)
     const p = el.play()
     if (p && typeof p.then === 'function') {
-      p.catch((err) => {
-        // Log so we can see autoplay/codec failures
-        // eslint-disable-next-line no-console
-        console.warn('[audio] play() rejected:', err?.name, err?.message, 'src:', el.currentSrc)
+      p.then(() => {
+        setBlocked(false)
+        clearAutoplayListeners()
+      }).catch((err) => {
+        const name = err?.name ? String(err.name) : 'PlaybackError'
+        const message = err?.message ? String(err.message) : 'Playback was blocked by the browser.'
+        setBlocked(name === 'NotAllowedError')
+        setError(`${name}: ${message}`)
+        console.warn('[audio] play() rejected:', name, message, 'src:', el.currentSrc)
       })
     }
-  }, [])
+  }, [clearAutoplayListeners])
 
   const play = useCallback((id: string) => {
     const t = previewTracks.find((x) => x.id === id)
@@ -63,14 +81,55 @@ export function AudioProvider({ children }: { children: ReactNode }) {
     if (current?.id === id) {
       if (el.paused) {
         const p = el.play()
-        if (p && typeof p.then === 'function') p.catch(() => {})
+        if (p && typeof p.then === 'function') {
+          p.then(() => {
+            setBlocked(false)
+            setError(null)
+            clearAutoplayListeners()
+          }).catch((err) => {
+            setBlocked(err?.name === 'NotAllowedError')
+            setError(err?.message ?? 'Playback was blocked by the browser.')
+          })
+        }
       } else {
         el.pause()
       }
       return
     }
     startPlayback(t)
-  }, [current, startPlayback])
+  }, [clearAutoplayListeners, current, startPlayback])
+
+  const requestAutoplay = useCallback((id?: string) => {
+    clearAutoplayListeners()
+
+    const t = previewTracks.find((x) => x.id === id) ?? previewTracks[0]
+    const el = elRef.current
+    if (!t || !el) return () => {}
+
+    setCurrent(t)
+
+    // Browsers generally block audible autoplay. We still try once for browsers
+    // or repeat visitors that allow it, then arm the first real user gesture.
+    startPlayback(t)
+
+    const controller = new AbortController()
+    const unlock = () => startPlayback(t)
+    const opts: AddEventListenerOptions = {
+      capture: true,
+      passive: true,
+      signal: controller.signal,
+    }
+
+    window.addEventListener('pointerdown', unlock, opts)
+    window.addEventListener('keydown', unlock, opts)
+    window.addEventListener('touchstart', unlock, opts)
+
+    autoplayCleanupRef.current = () => controller.abort()
+    return () => {
+      controller.abort()
+      if (autoplayCleanupRef.current) autoplayCleanupRef.current = null
+    }
+  }, [clearAutoplayListeners, startPlayback])
 
   const toggle = useCallback(() => {
     const el = elRef.current
@@ -82,11 +141,20 @@ export function AudioProvider({ children }: { children: ReactNode }) {
     }
     if (el.paused) {
       const p = el.play()
-      if (p && typeof p.then === 'function') p.catch(() => {})
+      if (p && typeof p.then === 'function') {
+        p.then(() => {
+          setBlocked(false)
+          setError(null)
+          clearAutoplayListeners()
+        }).catch((err) => {
+          setBlocked(err?.name === 'NotAllowedError')
+          setError(err?.message ?? 'Playback was blocked by the browser.')
+        })
+      }
     } else {
       el.pause()
     }
-  }, [current, startPlayback])
+  }, [clearAutoplayListeners, current, startPlayback])
 
   const next = useCallback(() => {
     const t = current
@@ -112,8 +180,22 @@ export function AudioProvider({ children }: { children: ReactNode }) {
   const progress = duration > 0 ? currentTime / duration : 0
 
   const api = useMemo<AudioApi>(
-    () => ({ current, playing, progress, currentTime, duration, play, toggle, next, prev, seek }),
-    [current, playing, progress, currentTime, duration, play, toggle, next, prev, seek],
+    () => ({
+      current,
+      playing,
+      blocked,
+      error,
+      progress,
+      currentTime,
+      duration,
+      play,
+      requestAutoplay,
+      toggle,
+      next,
+      prev,
+      seek,
+    }),
+    [current, playing, blocked, error, progress, currentTime, duration, play, requestAutoplay, toggle, next, prev, seek],
   )
 
   // shared listeners for the JSX audio element
@@ -121,6 +203,12 @@ export function AudioProvider({ children }: { children: ReactNode }) {
   const onMeta = () => { const el = elRef.current; if (el) setDuration(el.duration || 0) }
   const onPlay = () => setPlaying(true)
   const onPause = () => setPlaying(false)
+  const onError = () => {
+    const el = elRef.current
+    const mediaError = el?.error
+    if (!mediaError) return
+    setError(`MediaError ${mediaError.code}`)
+  }
   const onEnded = () => {
     const c = currentRef.current
     const el = elRef.current
@@ -145,6 +233,7 @@ export function AudioProvider({ children }: { children: ReactNode }) {
         onLoadedMetadata={onMeta}
         onPlay={onPlay}
         onPause={onPause}
+        onError={onError}
         onEnded={onEnded}
         // hidden but kept in DOM
         style={{ display: 'none' }}
@@ -161,7 +250,7 @@ const fmt = (s: number) => {
 }
 
 export function MiniPlayer() {
-  const { current, playing, progress, currentTime, duration, toggle, next, prev, seek } = useAudio()
+  const { current, playing, blocked, error, progress, currentTime, duration, toggle, next, prev, seek } = useAudio()
   const barRef = useRef<HTMLDivElement>(null)
 
   if (!current) return null
@@ -177,7 +266,9 @@ export function MiniPlayer() {
   return (
     <div className="mp" role="region" aria-label="Audio player">
       <div className="mp-info">
-        <span className="mp-eyebrow">Now playing · Iris Veil</span>
+        <span className="mp-eyebrow">
+          {blocked ? 'Tap play to enable audio' : error ? 'Audio needs attention' : 'Now playing · Iris Veil'}
+        </span>
         <span className="mp-title">{current.title}</span>
       </div>
       <div className="mp-controls">

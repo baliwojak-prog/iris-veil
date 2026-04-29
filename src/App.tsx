@@ -1,5 +1,5 @@
 import { Suspense, lazy, useEffect, useState } from 'react'
-import { AudioProvider, MiniPlayer } from './audio'
+import { AudioProvider, MiniPlayer, useAudio } from './audio'
 import './App.css'
 
 const V1Halflight = lazy(() => import('./versions/V1Halflight').then((m) => ({ default: m.V1Halflight })))
@@ -22,7 +22,8 @@ function readHash(): VersionId {
   return 'v1'
 }
 
-function App() {
+function IrisShell() {
+  const { requestAutoplay } = useAudio()
   const [version, setVersion] = useState<VersionId>(() =>
     typeof window === 'undefined' ? 'v1' : readHash(),
   )
@@ -30,16 +31,22 @@ function App() {
   useEffect(() => {
     const onHash = () => setVersion(readHash())
     window.addEventListener('hashchange', onHash)
-    return () => window.removeEventListener('hashchange', onHash)
+    window.addEventListener('popstate', onHash)
+    return () => {
+      window.removeEventListener('hashchange', onHash)
+      window.removeEventListener('popstate', onHash)
+    }
   }, [])
 
   const select = (id: VersionId) => {
-    window.location.hash = `/${id}`
+    setVersion(id)
+    window.history.pushState(null, '', `#/${id}`)
     window.scrollTo(0, 0)
+    if (id === 'v4') requestAutoplay('compassion')
   }
 
   return (
-    <AudioProvider>
+    <>
       <Suspense fallback={<div className="vload" aria-hidden="true" />}>
         {version === 'v1' && <V1Halflight />}
         {version === 'v2' && <V2Nocturne />}
@@ -64,6 +71,14 @@ function App() {
           </button>
         ))}
       </div>
+    </>
+  )
+}
+
+function App() {
+  return (
+    <AudioProvider>
+      <IrisShell />
     </AudioProvider>
   )
 }

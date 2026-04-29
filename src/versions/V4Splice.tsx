@@ -1,11 +1,13 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { motion } from 'motion/react'
 import { ArrowUpRight, EnvelopeSimple, SoundcloudLogo, SpotifyLogo } from '@phosphor-icons/react'
 import { previewTracks, shows, statusLabel, tracks } from '../data'
 import { useAudio } from '../audio'
 import './V4Splice.css'
 
-const STRIPS = 14
+const DESKTOP_STRIPS = 10
+const MOBILE_STRIPS = 7
+const HERO_RATE = 0.5
 
 function V4Preview() {
   const { current, playing, play } = useAudio()
@@ -45,21 +47,26 @@ function V4Preview() {
 
 export function V4Splice() {
   const heroRef = useRef<HTMLDivElement>(null)
+  const heroVideoRefs = useRef<HTMLVideoElement[]>([])
   const [progress, setProgress] = useState(0)
-  const videoRef = useRef<HTMLVideoElement>(null)
+  const [stripCount, setStripCount] = useState(DESKTOP_STRIPS)
+  const { requestAutoplay } = useAudio()
 
   useEffect(() => {
     document.title = 'Iris Veil — Halflight (v4 · splice)'
   }, [])
 
-  // slow the video
+  useEffect(() => requestAutoplay('compassion'), [requestAutoplay])
+
   useEffect(() => {
-    const el = videoRef.current
-    if (!el) return
-    el.playbackRate = 0.5
-    const onLoaded = () => { el.playbackRate = 0.5 }
-    el.addEventListener('loadedmetadata', onLoaded)
-    return () => el.removeEventListener('loadedmetadata', onLoaded)
+    const updateStripCount = () => {
+      const compact = window.matchMedia('(max-width: 700px)').matches
+      setStripCount(compact ? MOBILE_STRIPS : DESKTOP_STRIPS)
+    }
+
+    updateStripCount()
+    window.addEventListener('resize', updateStripCount)
+    return () => window.removeEventListener('resize', updateStripCount)
   }, [])
 
   useEffect(() => {
@@ -85,19 +92,21 @@ export function V4Splice() {
     }
   }, [])
 
-  const strips = Array.from({ length: STRIPS }, (_, i) => {
-    const t = i / (STRIPS - 1)
+  const strips = useMemo(() => Array.from({ length: stripCount }, (_, i) => {
+    const t = i / (stripCount - 1)
     const top = t * 100
-    const bottom = ((i + 1) / STRIPS) * 100
+    const bottom = ((i + 1) / stripCount) * 100
     const dir = i % 2 === 0 ? -1 : 1
     const variance = 0.6 + ((i * 37) % 100) / 100
     const driftPct = dir * progress * 80 * variance
-    const middleness = 1 - Math.abs((i / (STRIPS - 1)) - 0.5) * 2
+    const middleness = 1 - Math.abs((i / (stripCount - 1)) - 0.5) * 2
     const fadeStart = 0.3 + middleness * 0.25
     const opacity = Math.max(0, 1 - Math.max(0, (progress - fadeStart) / (1 - fadeStart)))
     const blur = progress > 0.6 ? (progress - 0.6) * 12 : 0
     return { top, bottom, driftPct, opacity, blur, key: i }
-  })
+  }), [progress, stripCount])
+
+  const showStrips = progress > 0.015
 
   return (
     <main className="v4-root">
@@ -130,12 +139,20 @@ export function V4Splice() {
       <div ref={heroRef} className="v4-hero" style={{ '--p': progress } as React.CSSProperties}>
         <div className="v4-strips" aria-hidden="true">
           <video
-            ref={videoRef}
+            ref={(el) => {
+              if (el) {
+                heroVideoRefs.current[0] = el
+                el.playbackRate = HERO_RATE
+              }
+            }}
             src="/hero.mp4"
             autoPlay loop muted playsInline preload="auto"
-            className="v4-source-video"
+            onLoadedMetadata={(event) => {
+              event.currentTarget.playbackRate = HERO_RATE
+            }}
+            className="v4-base-video"
           />
-          {strips.map((s) => (
+          {showStrips && strips.map((s, index) => (
             <div
               key={s.key}
               className="v4-strip"
@@ -147,8 +164,17 @@ export function V4Splice() {
               }}
             >
               <video
+                ref={(el) => {
+                  if (el) {
+                    heroVideoRefs.current[index + 1] = el
+                    el.playbackRate = HERO_RATE
+                  }
+                }}
                 src="/hero.mp4"
-                autoPlay loop muted playsInline preload="auto"
+                autoPlay loop muted playsInline preload={index < 2 ? 'auto' : 'metadata'}
+                onLoadedMetadata={(event) => {
+                  event.currentTarget.playbackRate = HERO_RATE
+                }}
                 className="v4-strip-video"
               />
             </div>
