@@ -5,8 +5,8 @@ import { previewTracks, shows, statusLabel, tracks } from '../data'
 import { useAudio } from '../audio'
 import './V4Splice.css'
 
-const DESKTOP_STRIPS = 10
-const MOBILE_STRIPS = 7
+const DESKTOP_STRIPS = 14
+const MOBILE_STRIPS = 10
 const HERO_RATE = 0.5
 
 function V4Preview() {
@@ -106,8 +106,6 @@ export function V4Splice() {
     return { top, bottom, driftPct, opacity, blur, key: i }
   }), [progress, stripCount])
 
-  const showStrips = progress > 0.015
-
   return (
     <main className="v4-root">
       <nav className="v4-nav">
@@ -138,21 +136,7 @@ export function V4Splice() {
 
       <div ref={heroRef} className="v4-hero" style={{ '--p': progress } as React.CSSProperties}>
         <div className="v4-strips" aria-hidden="true">
-          <video
-            ref={(el) => {
-              if (el) {
-                heroVideoRefs.current[0] = el
-                el.playbackRate = HERO_RATE
-              }
-            }}
-            src="/hero.mp4"
-            autoPlay loop muted playsInline preload="auto"
-            onLoadedMetadata={(event) => {
-              event.currentTarget.playbackRate = HERO_RATE
-            }}
-            className="v4-base-video"
-          />
-          {showStrips && strips.map((s, index) => (
+          {strips.map((s, index) => (
             <div
               key={s.key}
               className="v4-strip"
@@ -166,12 +150,12 @@ export function V4Splice() {
               <video
                 ref={(el) => {
                   if (el) {
-                    heroVideoRefs.current[index + 1] = el
+                    heroVideoRefs.current[index] = el
                     el.playbackRate = HERO_RATE
                   }
                 }}
                 src="/hero.mp4"
-                autoPlay loop muted playsInline preload={index < 2 ? 'auto' : 'metadata'}
+                autoPlay loop muted playsInline preload={index < 3 ? 'auto' : 'metadata'}
                 onLoadedMetadata={(event) => {
                   event.currentTarget.playbackRate = HERO_RATE
                 }}
