@@ -1,6 +1,10 @@
 import { Suspense, lazy, useEffect, useState } from 'react'
 import { AudioProvider, MiniPlayer, useAudio } from './audio'
+import { previewTracks } from './data'
 import './App.css'
+
+const randomTrackId = () =>
+  previewTracks[Math.floor(Math.random() * previewTracks.length)]!.id
 
 const V1Halflight = lazy(() => import('./versions/V1Halflight').then((m) => ({ default: m.V1Halflight })))
 const V2Nocturne  = lazy(() => import('./versions/V2Nocturne').then((m) => ({ default: m.V2Nocturne })))
@@ -23,7 +27,7 @@ function readHash(): VersionId {
 }
 
 function IrisShell() {
-  const { requestAutoplay } = useAudio()
+  const { play, requestAutoplay } = useAudio()
   const [version, setVersion] = useState<VersionId>(() =>
     typeof window === 'undefined' ? 'v1' : readHash(),
   )
@@ -38,11 +42,16 @@ function IrisShell() {
     }
   }, [])
 
+  // page-load autoplay: try once; if blocked, requestAutoplay arms a one-shot
+  // listener so the very first user gesture (anywhere) starts a random song.
+  useEffect(() => requestAutoplay(randomTrackId()), [requestAutoplay])
+
   const select = (id: VersionId) => {
     setVersion(id)
     window.history.pushState(null, '', `#/${id}`)
     window.scrollTo(0, 0)
-    if (id === 'v4') requestAutoplay('compassion')
+    // version-switch click is itself a user gesture — start a fresh random song
+    play(randomTrackId())
   }
 
   return (
