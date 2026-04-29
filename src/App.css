@@ -1,0 +1,183 @@
+/* loading placeholder during lazy chunk fetch */
+.vload {
+  position: fixed; inset: 0;
+  background: #0c0a0d;
+  z-index: 1;
+}
+
+/* version switcher — fixed pill bottom-center, theme-agnostic */
+
+.vswitch {
+  position: fixed;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 4px;
+  padding: 4px;
+  border-radius: 999px;
+  background: rgba(20, 16, 22, 0.78);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  backdrop-filter: blur(18px) saturate(160%);
+  -webkit-backdrop-filter: blur(18px) saturate(160%);
+  box-shadow:
+    0 16px 40px -8px rgba(0, 0, 0, 0.4),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  z-index: 999;
+  font-family: 'Jost', 'Geist', system-ui, sans-serif;
+}
+
+.vswitch-btn {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 16px;
+  border-radius: 999px;
+  color: rgba(255, 255, 255, 0.7);
+  background: transparent;
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  font-size: 12.5px;
+  letter-spacing: 0.01em;
+  white-space: nowrap;
+}
+
+.vswitch-btn:hover {
+  color: #fff;
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.vswitch-btn.active {
+  color: #0c0a0d;
+  background: #f1ece4;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.5);
+}
+
+.vswitch-id {
+  font-family: 'Geist Mono', monospace;
+  font-size: 10.5px;
+  letter-spacing: 0.08em;
+  opacity: 0.7;
+}
+
+.vswitch-label {
+  font-weight: 500;
+  letter-spacing: 0.02em;
+}
+
+.vswitch-tag {
+  font-family: 'Geist Mono', monospace;
+  font-size: 10px;
+  letter-spacing: 0.06em;
+  opacity: 0.55;
+}
+
+@media (max-width: 768px) {
+  .vswitch { bottom: 12px; padding: 3px; gap: 2px; }
+  .vswitch-btn { padding: 6px 10px; gap: 6px; }
+  .vswitch-tag { display: none; }
+  .vswitch-label { font-size: 11.5px; }
+}
+
+/* =====================================
+   MiniPlayer — fixed bottom-left dock
+   ===================================== */
+.mp {
+  position: fixed;
+  bottom: 20px;
+  left: 20px;
+  z-index: 998;
+  display: grid;
+  grid-template-columns: 1fr auto;
+  grid-template-areas:
+    'info controls'
+    'bar  bar';
+  gap: 10px 16px;
+  width: 320px;
+  padding: 12px 14px;
+  border-radius: 14px;
+  background: rgba(20, 16, 22, 0.85);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  backdrop-filter: blur(18px) saturate(160%);
+  -webkit-backdrop-filter: blur(18px) saturate(160%);
+  box-shadow:
+    0 16px 40px -8px rgba(0, 0, 0, 0.5),
+    inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  font-family: 'Jost', 'Geist Mono', system-ui, sans-serif;
+  color: rgba(255, 255, 255, 0.92);
+}
+
+.mp-info { grid-area: info; display: flex; flex-direction: column; min-width: 0; }
+.mp-eyebrow {
+  font-family: 'Geist Mono', monospace;
+  font-size: 10px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.55);
+  margin-bottom: 2px;
+}
+.mp-title {
+  font-size: 13.5px;
+  font-weight: 500;
+  letter-spacing: -0.005em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.mp-controls {
+  grid-area: controls;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.mp-btn {
+  display: grid;
+  place-items: center;
+  width: 30px; height: 30px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.08);
+  color: rgba(255, 255, 255, 0.85);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  transition: all 0.2s;
+}
+.mp-btn:hover { background: rgba(255, 255, 255, 0.18); color: #fff; }
+.mp-btn-play {
+  width: 36px; height: 36px;
+  background: #f1ece4;
+  color: #0c0a0d;
+  border-color: #f1ece4;
+}
+.mp-btn-play:hover { background: #ffffff; }
+
+.mp-bar-wrap {
+  grid-area: bar;
+  cursor: pointer;
+  padding: 4px 0;
+}
+.mp-bar {
+  width: 100%;
+  height: 2px;
+  background: rgba(255, 255, 255, 0.16);
+  border-radius: 2px;
+  overflow: hidden;
+}
+.mp-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #d8895a, #f1ece4);
+  transition: width 0.1s linear;
+}
+.mp-time {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 6px;
+  font-family: 'Geist Mono', monospace;
+  font-size: 10.5px;
+  color: rgba(255, 255, 255, 0.55);
+  letter-spacing: 0.04em;
+}
+
+@media (max-width: 768px) {
+  .mp { width: calc(100vw - 24px); left: 12px; bottom: 70px; }
+}

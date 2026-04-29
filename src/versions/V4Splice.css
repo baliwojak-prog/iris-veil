@@ -1,0 +1,350 @@
+/* V4 — Splice (scroll-driven horizontal video shred / dissolve) */
+
+.v4-root {
+  --bg: #0c0a0d;
+  --ink: #f1ece4;
+  --ink-soft: #cdc4b8;
+  --muted: #837a6f;
+  --faint: #4a4540;
+  --line: rgba(241, 236, 228, 0.12);
+  --line-soft: rgba(241, 236, 228, 0.05);
+  --accent: #d8895a;
+  --accent-cool: #6a8aa8;
+
+  position: relative;
+  min-height: 100dvh;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: 'Jost', 'Century Gothic', system-ui, sans-serif;
+  font-weight: 300;
+  overflow-x: clip;
+  letter-spacing: 0.01em;
+}
+
+/* solid white horizontal bars — full viewport width, ~15px tall, traveling
+   vertically. mix-blend-mode: difference makes them lift the dark page to white
+   and invert any light text to black where they pass. */
+.v4-bars {
+  position: fixed; inset: 0;
+  z-index: 60;
+  pointer-events: none;
+  overflow: hidden;
+  transition: opacity 0.3s linear;
+  mix-blend-mode: difference;
+}
+
+.v4-bar {
+  position: absolute;
+  left: 0; right: 0;
+  height: 16px;
+  background: #ffffff;
+  top: 0;
+  transform: translateY(-32px);
+  animation: v4-bar-travel linear infinite;
+  will-change: transform;
+}
+
+@keyframes v4-bar-travel {
+  from { transform: translateY(-32px); }
+  to   { transform: translateY(100vh); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .v4-bar { animation: none !important; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .v4-vline { animation: none !important; }
+}
+
+/* nav */
+.v4-nav {
+  position: fixed; top: 24px; left: 32px; right: 32px; z-index: 50;
+  display: flex; justify-content: space-between; align-items: center;
+  font-family: 'Geist Mono', monospace;
+  font-size: 11px; letter-spacing: 0.18em; text-transform: uppercase;
+  color: var(--ink);
+  mix-blend-mode: difference;
+}
+.v4-nav-mark { color: var(--accent); }
+.v4-nav-name { font-family: 'Jost', sans-serif; font-size: 14px; letter-spacing: 0.22em; }
+.v4-nav-cta { transition: color 0.3s; }
+.v4-nav-cta:hover { color: var(--accent); }
+
+/* hero — needs lots of vertical room so scroll progress can run 0..1 */
+.v4-hero {
+  position: relative;
+  height: 200vh;
+  isolation: isolate;
+}
+
+.v4-strips {
+  position: sticky;
+  top: 0;
+  width: 100%;
+  height: 100vh;
+  overflow: hidden;
+  background: var(--bg);
+}
+
+.v4-source-video {
+  position: absolute; width: 1px; height: 1px;
+  opacity: 0; pointer-events: none;
+}
+
+/* each strip is a clipped copy of the video that translates on scroll */
+.v4-strip {
+  position: absolute; inset: 0;
+  will-change: transform, opacity, filter;
+}
+
+.v4-strip-video {
+  width: 100%; height: 100%; object-fit: cover; object-position: 50% 50%;
+  filter: contrast(1.05) saturate(0.95) brightness(0.94);
+}
+
+/* film grain overlay on strips */
+.v4-strip-grain {
+  position: absolute; inset: 0; pointer-events: none;
+  mix-blend-mode: overlay; opacity: 0.08;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='1.0' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+
+/* hero overlay text */
+.v4-hero-overlay {
+  position: absolute; inset: 0;
+  display: flex; flex-direction: column; justify-content: center;
+  padding: 0 clamp(32px, 6vw, 96px);
+  pointer-events: none;
+}
+.v4-hero-overlay > * { pointer-events: auto; }
+
+.v4-eyebrow {
+  display: inline-flex; align-items: center; gap: 14px;
+  font-family: 'Geist Mono', monospace;
+  font-size: 11px; letter-spacing: 0.18em; text-transform: uppercase;
+  color: var(--ink-soft);
+  margin-bottom: 32px;
+  /* fade out as page scrolls */
+  opacity: calc(1 - var(--p, 0) * 1.2);
+}
+.v4-eyebrow-bar { width: 36px; height: 1px; background: var(--accent); }
+
+.v4-title {
+  font-weight: 200;
+  font-size: clamp(72px, 13vw, 220px);
+  line-height: 0.86;
+  letter-spacing: -0.04em;
+  margin: 0;
+  display: flex; flex-direction: column;
+  /* push text up slightly as user scrolls so it parts ways with the dissolving image */
+  transform: translateY(calc(var(--p, 0) * -40px));
+  opacity: calc(1 - var(--p, 0) * 0.8);
+}
+.v4-title-line { display: block; }
+.v4-italic { font-style: italic; padding-left: clamp(24px, 6vw, 96px); color: var(--accent); }
+
+.v4-lede {
+  margin: 32px 0 0;
+  max-width: 44ch;
+  font-size: 16px; line-height: 1.6;
+  color: var(--ink-soft);
+  margin-left: clamp(24px, 6vw, 96px);
+  opacity: calc(1 - var(--p, 0) * 1.4);
+}
+
+.v4-scroll-hint {
+  position: absolute; bottom: 48px; left: clamp(32px, 6vw, 96px);
+  display: flex; align-items: center; gap: 14px;
+  font-family: 'Geist Mono', monospace;
+  font-size: 10.5px; letter-spacing: 0.18em; text-transform: uppercase;
+  color: var(--muted);
+  opacity: calc(1 - var(--p, 0) * 2);
+}
+.v4-scroll-line {
+  width: 56px; height: 1px; background: var(--ink-soft);
+  position: relative; overflow: hidden;
+}
+.v4-scroll-line::before {
+  content: ''; position: absolute; inset: 0;
+  background: var(--accent);
+  animation: v4-scroll-pulse 2.4s ease-in-out infinite;
+}
+@keyframes v4-scroll-pulse {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
+}
+
+/* sections */
+.v4-section {
+  position: relative; z-index: 2;
+  max-width: 1280px; margin: 0 auto;
+  padding: 120px 32px;
+  border-top: 1px solid var(--line);
+}
+
+.v4-section-head {
+  display: grid; gap: 16px; margin-bottom: 48px;
+  max-width: 60ch;
+}
+.v4-section-head > span {
+  font-family: 'Geist Mono', monospace;
+  font-size: 11px; letter-spacing: 0.16em; text-transform: uppercase;
+  color: var(--accent);
+}
+.v4-section-head h2 {
+  font-weight: 200;
+  font-size: clamp(44px, 6vw, 88px);
+  line-height: 0.95; letter-spacing: -0.025em;
+  margin: 0;
+  color: var(--ink);
+}
+.v4-section-head p {
+  font-size: 15.5px; line-height: 1.65; color: var(--ink-soft);
+  max-width: 56ch; margin: 0;
+}
+
+/* preview */
+.v4-preview-list { list-style: none; margin: 0; padding: 0; border-top: 1px solid var(--line); }
+.v4-preview-row {
+  display: grid;
+  grid-template-columns: 44px 60px 1fr auto;
+  gap: 24px; align-items: center;
+  padding: 22px 0;
+  border-bottom: 1px solid var(--line-soft);
+  transition: padding 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.v4-preview-row:hover { padding-left: 12px; }
+.v4-preview-row.active { padding-left: 16px; }
+.v4-preview-play {
+  display: grid; place-items: center;
+  width: 36px; height: 36px;
+  border-radius: 50%;
+  background: rgba(241, 236, 228, 0.06);
+  color: var(--ink);
+  border: 1px solid var(--line);
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.v4-preview-play:hover { background: var(--accent); color: var(--bg); border-color: var(--accent); }
+.v4-preview-row.active .v4-preview-play { background: var(--accent); color: var(--bg); border-color: var(--accent); }
+.v4-preview-num { font-family: 'Geist Mono', monospace; font-size: 11.5px; letter-spacing: 0.06em; color: var(--muted); }
+.v4-preview-title { font-size: 22px; font-weight: 300; letter-spacing: -0.005em; color: var(--ink); }
+.v4-preview-dur { font-family: 'Geist Mono', monospace; font-size: 12.5px; color: var(--ink-soft); }
+
+@media (max-width: 700px) {
+  .v4-preview-row { grid-template-columns: 36px 40px 1fr auto; gap: 12px; }
+}
+
+/* tracks */
+.v4-tracks {
+  list-style: none; margin: 0; padding: 0;
+  border-top: 1px solid var(--line);
+}
+.v4-tracks li {
+  display: grid;
+  grid-template-columns: 60px 1fr auto auto;
+  align-items: baseline; gap: 24px;
+  padding: 20px 0;
+  border-bottom: 1px solid var(--line-soft);
+  transition: padding 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.v4-tracks li:hover { padding-left: 12px; }
+.v4-track-num { font-family: 'Geist Mono', monospace; font-size: 11.5px; letter-spacing: 0.04em; color: var(--muted); }
+.v4-track-title { font-size: 22px; font-weight: 300; letter-spacing: -0.005em; color: var(--ink); }
+.v4-track-feat {
+  font-size: 11.5px; letter-spacing: 0.06em; text-transform: uppercase;
+  color: var(--ink-soft);
+  font-family: 'Geist Mono', monospace;
+}
+.v4-track-dur { font-family: 'Geist Mono', monospace; font-size: 12.5px; color: var(--ink-soft); }
+
+@media (max-width: 700px) {
+  .v4-tracks li { grid-template-columns: 40px 1fr auto; gap: 12px; }
+  .v4-track-feat { display: none; }
+}
+
+/* shows */
+.v4-shows { list-style: none; margin: 0; padding: 0; border-top: 1px solid var(--line); }
+.v4-shows li {
+  display: grid;
+  grid-template-columns: 80px 1fr 1.4fr 110px 110px;
+  align-items: center; gap: 24px;
+  padding: 22px 0;
+  border-bottom: 1px solid var(--line-soft);
+  transition: padding 0.3s;
+}
+.v4-shows li:hover { padding-left: 12px; }
+.v4-show-date { font-family: 'Geist Mono', monospace; font-size: 12.5px; letter-spacing: 0.04em; color: var(--ink-soft); text-transform: uppercase; }
+.v4-show-city { font-size: 24px; font-weight: 300; letter-spacing: -0.005em; }
+.v4-show-venue { font-size: 14px; color: var(--muted); }
+.v4-show-status {
+  font-family: 'Geist Mono', monospace; font-size: 11px;
+  letter-spacing: 0.1em; text-transform: uppercase;
+  padding: 4px 10px; border: 1px solid var(--line); border-radius: 2px;
+  text-align: center;
+}
+.v4-status-on-sale { color: var(--accent); border-color: rgba(216, 137, 90, 0.4); }
+.v4-status-few-left { color: var(--accent); border-color: var(--accent); }
+.v4-status-sold-out { color: var(--muted); }
+
+.v4-show-btn {
+  display: inline-flex; align-items: center; gap: 6px; justify-self: end;
+  padding: 9px 16px; border: 1px solid var(--ink); border-radius: 999px;
+  font-size: 12.5px; letter-spacing: 0.04em;
+  transition: all 0.3s;
+}
+.v4-show-btn:hover { background: var(--ink); color: var(--bg); }
+.v4-show-btn-off { opacity: 0.35; pointer-events: none; border-color: var(--line); }
+
+@media (max-width: 900px) {
+  .v4-shows li { grid-template-columns: 1fr 1fr; gap: 8px 16px; }
+  .v4-show-city { grid-column: 1 / -1; font-size: 28px; order: -1; }
+  .v4-show-date { order: -2; }
+  .v4-show-venue { grid-column: 1 / -1; }
+  .v4-show-status { grid-column: 1; }
+  .v4-show-btn { grid-column: 2; justify-self: end; }
+}
+
+/* listen */
+.v4-listen-row {
+  display: flex; flex-wrap: wrap; gap: 0;
+  border-top: 1px solid var(--line);
+}
+.v4-listen-row a {
+  display: inline-flex; align-items: center; gap: 10px;
+  padding: 22px 28px;
+  border-right: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+  font-family: 'Geist Mono', monospace;
+  font-size: 12px; letter-spacing: 0.1em; text-transform: uppercase;
+  color: var(--ink-soft);
+  transition: all 0.3s;
+}
+.v4-listen-row a svg { color: var(--accent); }
+.v4-listen-row a:hover { background: rgba(216, 137, 90, 0.06); color: var(--ink); }
+
+/* footer */
+.v4-foot {
+  max-width: 1280px; margin: 0 auto;
+  padding: 48px 32px 64px;
+  display: flex; justify-content: space-between; align-items: center; gap: 24px;
+  border-top: 1px solid var(--line);
+  font-family: 'Geist Mono', monospace;
+  font-size: 11px; letter-spacing: 0.16em; text-transform: uppercase;
+  color: var(--muted);
+  flex-wrap: wrap;
+}
+.v4-foot a { display: inline-flex; align-items: center; gap: 8px; transition: color 0.3s; }
+.v4-foot a:hover { color: var(--accent); }
+
+.v4-foot-credit {
+  flex-basis: 100%;
+  text-align: center;
+  margin-top: 18px;
+  padding-top: 18px;
+  border-top: 1px solid var(--line-soft);
+  color: var(--accent);
+  letter-spacing: 0.24em;
+}
